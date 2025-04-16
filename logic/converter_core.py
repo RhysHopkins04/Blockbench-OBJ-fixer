@@ -1,24 +1,28 @@
 import os
 import shutil
+import re
 from logic.blender_cleaner import run_blender_cleaner
 
 TEMP_DIR = os.path.join(os.path.dirname(__file__), "..", "temp")
 
-# === Deduplicate OBJ Groups ===
+# === Normalize Group Name ===
+def normalize_group_name(name):
+    # Convert 'bone.001' → 'bone_1', etc.
+    return re.sub(r'\.(\d+)', r'_\1', name)
+
+# === Deduplicate and Normalize OBJ Groups ===
 def deduplicate_obj(obj_path):
     group_counts = {}
     new_lines = []
-    renaming_log = []
 
     with open(obj_path, 'r', encoding='utf-8') as f:
         for line in f:
             if line.startswith("o "):
-                group_name = line.strip().split(" ", 1)[1]
-                count = group_counts.get(group_name, 0)
-                new_group = f"{group_name}_{count}" if count > 0 else group_name
-                if count > 0:
-                    renaming_log.append(f"{group_name} → {new_group}")
-                group_counts[group_name] = count + 1
+                raw_name = line.strip().split(" ", 1)[1]
+                norm_name = normalize_group_name(raw_name)
+                count = group_counts.get(norm_name, 0)
+                new_group = f"{norm_name}_{count}" if count > 0 else norm_name
+                group_counts[norm_name] = count + 1
                 new_lines.append(f"o {new_group}\n")
             else:
                 new_lines.append(line)
@@ -26,7 +30,7 @@ def deduplicate_obj(obj_path):
     with open(obj_path, 'w', encoding='utf-8') as out_obj:
         out_obj.writelines(new_lines)
 
-    return sorted(group_counts.keys()), renaming_log
+    return sorted(group_counts.keys())
 
 # === Java Group Class Generator ===
 def write_java_class(class_name, group_names, output_dir):
@@ -61,14 +65,7 @@ def process_obj_file(input_path, output_dir, java_class=None, logger=print, gene
         raise RuntimeError("Blender failed to generate cleaned OBJ.")
 
     logger("Deduplicating group names...")
-    group_names, log = deduplicate_obj(cleaned_path)
-
-    if log:
-        logger(f"Renamed {len(log)} duplicate group(s).")
-        for entry in log:
-            logger("  " + entry)
-    else:
-        logger("No duplicate groups found.")
+    group_names = deduplicate_obj(cleaned_path)
 
     logger(f"Found {len(group_names)} group(s) after processing.")
 
