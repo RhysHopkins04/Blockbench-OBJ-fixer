@@ -1,4 +1,5 @@
 import os
+import sys
 import subprocess
 import tempfile
 import webbrowser
@@ -16,7 +17,12 @@ def prompt_blender_missing():
     root.withdraw()
     if messagebox.askyesno("Missing Blender", "Blender was not found in the expected location.\nWould you like to download Blender 3.6.22 now?"):
         webbrowser.open("https://www.blender.org/download/lts/3.6/")
-        messagebox.showinfo("Download Instructions", "Please download the portable .zip and extract it to:\n\n  tools/blender-3.6.22-windows-x64\n\nThen re-run the program.")
+        messagebox.showinfo(
+            "Download Instructions",
+            "Please download the portable .zip and extract it to:\n\n  tools/blender-3.6.22-windows-x64\n\n"
+            "⚠️ Make sure the folder contains blender.exe directly.\n"
+            "If you see another folder inside with the same name, move its contents up one level."
+        )
     else:
         messagebox.showwarning("Blender Required", "This tool requires Blender 3.6.22 to continue.")
     sys.exit(1)

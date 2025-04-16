@@ -6,6 +6,15 @@ from tkinterdnd2 import TkinterDnD
 import threading
 import subprocess
 
+# Force check Blender availability early
+try:
+    from logic.blender_cleaner import run_blender_cleaner, BLENDER_PATH, prompt_blender_missing
+    if not os.path.isfile(BLENDER_PATH):
+        prompt_blender_missing()
+except Exception as e:
+    messagebox.showerror("Fatal Error", f"Error while checking Blender: {e}")
+    sys.exit(1)
+
 def check_dependencies():
     try:
         import customtkinter
