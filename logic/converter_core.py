@@ -53,6 +53,18 @@ def write_txt_list(group_names, output_dir, output_name):
             f.write(group + "\n")
     return txt_path
 
+# === Update mtllib reference in .obj file ===
+def update_mtllib_reference(obj_path, new_mtl_filename):
+    new_lines = []
+    with open(obj_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            if line.startswith("mtllib "):
+                new_lines.append(f"mtllib {new_mtl_filename}\n")
+            else:
+                new_lines.append(line)
+    with open(obj_path, 'w', encoding='utf-8') as f:
+        f.writelines(new_lines)
+
 # === Main File Processor ===
 def process_obj_file(input_path, output_dir, java_class=None, logger=print, generate_txt=False, output_name="model"):
     if not os.path.isfile(input_path):
@@ -64,13 +76,25 @@ def process_obj_file(input_path, output_dir, java_class=None, logger=print, gene
     if not os.path.exists(cleaned_path):
         raise RuntimeError("Blender failed to generate cleaned OBJ.")
 
+    # Attempt to locate the .mtl file that Blender generated
+    cleaned_mtl_path = cleaned_path.replace(".obj", ".mtl")
+    final_name = output_name + ".obj"
+    final_path = os.path.join(output_dir, final_name)
+    final_mtl_name = output_name + ".mtl"
+    final_mtl_path = os.path.join(output_dir, final_mtl_name)
+
+    # Deduplicate and normalize OBJ groups
     logger("Deduplicating group names...")
     group_names = deduplicate_obj(cleaned_path)
 
     logger(f"Found {len(group_names)} group(s) after processing.")
 
-    final_name = output_name + ".obj"
-    final_path = os.path.join(output_dir, final_name)
+    # Update .obj mtllib reference if .mtl exists
+    if os.path.exists(cleaned_mtl_path):
+        update_mtllib_reference(cleaned_path, final_mtl_name)
+        shutil.move(cleaned_mtl_path, final_mtl_path)
+        logger(f"Updated and moved MTL file to: {final_mtl_path}")
+
     shutil.move(cleaned_path, final_path)
     logger(f"Final OBJ saved to: {final_path}")
 
