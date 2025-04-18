@@ -75,8 +75,8 @@ if hbm_mode:
     min_z = min(v.z for v in all_verts)
 
     offset_x = -(min_x + max_x) / 2
-    offset_y = -(min_y + max_y) / 2
-    offset_z = -min_z - 9.51355
+    offset_y = -(min_y + max_y) / 2 + 0.4
+    offset_z = -min_z - 9.1
 
     for obj in mesh_objects:
         bpy.ops.object.select_all(action='DESELECT')
