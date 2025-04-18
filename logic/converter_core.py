@@ -7,7 +7,6 @@ TEMP_DIR = os.path.join(os.path.dirname(__file__), "..", "temp")
 
 # === Normalize Group Name ===
 def normalize_group_name(name):
-    # Convert 'bone.001' → 'bone_1', etc.
     return re.sub(r'\.(\d+)', r'_\1', name)
 
 # === Deduplicate and Normalize OBJ Groups ===
@@ -66,12 +65,13 @@ def update_mtllib_reference(obj_path, new_mtl_filename):
         f.writelines(new_lines)
 
 # === Main File Processor ===
-def process_obj_file(input_path, output_dir, java_class=None, logger=print, generate_txt=False, output_name="model"):
+def process_obj_file(input_path, output_dir, java_class=None, logger=print,
+                     generate_txt=False, output_name="model", enable_hbm=False):
     if not os.path.isfile(input_path):
         raise FileNotFoundError("File not found: " + input_path)
 
     logger("Cleaning model with Blender...")
-    cleaned_path = run_blender_cleaner(input_path)
+    cleaned_path = run_blender_cleaner(input_path, enable_hbm=enable_hbm)
 
     if not os.path.exists(cleaned_path):
         raise RuntimeError("Blender failed to generate cleaned OBJ.")
@@ -83,13 +83,11 @@ def process_obj_file(input_path, output_dir, java_class=None, logger=print, gene
     final_mtl_name = output_name + ".mtl"
     final_mtl_path = os.path.join(output_dir, final_mtl_name)
 
-    # Deduplicate and normalize OBJ groups
     logger("Deduplicating group names...")
     group_names = deduplicate_obj(cleaned_path)
 
     logger(f"Found {len(group_names)} group(s) after processing.")
 
-    # Update .obj mtllib reference if .mtl exists
     if os.path.exists(cleaned_mtl_path):
         update_mtllib_reference(cleaned_path, final_mtl_name)
         shutil.move(cleaned_mtl_path, final_mtl_path)
@@ -106,7 +104,6 @@ def process_obj_file(input_path, output_dir, java_class=None, logger=print, gene
         txt_path = write_txt_list(group_names, output_dir, output_name)
         logger(f"Group list saved to: {txt_path}")
 
-    # Clean temp folder
     for f in os.listdir(TEMP_DIR):
         try:
             os.remove(os.path.join(TEMP_DIR, f))

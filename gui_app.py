@@ -43,6 +43,7 @@ class OBJFixerGUI(TkinterDnD.Tk):
         self.entry_boxes = []
         self.create_java = ctk.BooleanVar(value=True)
         self.create_txt = ctk.BooleanVar(value=False)
+        self.enable_hbm = ctk.BooleanVar(value=False)
 
         self.setup_widgets()
 
@@ -81,12 +82,15 @@ class OBJFixerGUI(TkinterDnD.Tk):
         self.right_btn_frame = ctk.CTkFrame(main, fg_color="transparent")
         self.right_btn_frame.grid(row=0, column=2, sticky="n", pady=10)
         self.folder_btn = ctk.CTkButton(self.right_btn_frame, text="Select Output Folder", command=self.choose_output_dir, border_width=2)
-        self.folder_btn.pack()
+        self.folder_btn.pack(side="left")
+        self.refresh_btn = ctk.CTkButton(self.right_btn_frame, text="🔄", width=28, height=28, command=self.update_output_preview)
+        self.refresh_btn.pack(side="left", padx=6)
 
         toggle_frame = ctk.CTkFrame(main, fg_color="transparent")
         toggle_frame.grid(row=2, column=0, sticky='n', pady=5)
         ctk.CTkCheckBox(toggle_frame, text="Generate Java Class", variable=self.create_java, command=self.toggle_txt_option).pack(anchor='w', padx=20)
         ctk.CTkCheckBox(toggle_frame, text="Generate .txt Groupings", variable=self.create_txt).pack(anchor='w', padx=20, pady=5)
+        ctk.CTkCheckBox(toggle_frame, text="HBM Conversion Mode", variable=self.enable_hbm).pack(anchor='w', padx=20, pady=5)
 
         ctk.CTkButton(main, text="Run Conversion", height=40, font=("Arial", 18), command=self.run_conversion).grid(row=2, column=1, pady=10)
         self.log_box = ctk.CTkTextbox(main, height=150)
@@ -115,6 +119,8 @@ class OBJFixerGUI(TkinterDnD.Tk):
             model_name.pack(side='left', fill='x', expand=True, padx=(5, 5))
             java_field = ctk.CTkEntry(row, placeholder_text="Java Class Name", border_width=2)
             java_field.pack(side='left', fill='x', expand=True)
+            remove_button = ctk.CTkButton(row, text="❌", width=30, command=lambda f=file: self.remove_file(f))
+            remove_button.pack(side='left', padx=5)
 
             model_name.bind("<KeyRelease>", lambda e, entry=model_name: entry.configure(border_color="#3a3a3a"))
             java_field.bind("<KeyRelease>", lambda e, entry=java_field: entry.configure(border_color="#3a3a3a"))
@@ -156,6 +162,11 @@ class OBJFixerGUI(TkinterDnD.Tk):
     def log(self, message):
         self.log_box.insert('end', message + '\n')
         self.log_box.see('end')
+
+    def remove_file(self, path):
+        if path in self.selected_files:
+            self.selected_files.remove(path)
+        self.refresh_fields()
 
     def run_conversion(self):
         self.file_input_frame_border.configure(border_color="#1a1a1a")
@@ -204,12 +215,15 @@ class OBJFixerGUI(TkinterDnD.Tk):
                     model_name = model_field.get().strip()
                     java_name = java_field.get().strip() if self.create_java.get() else None
                     generate_txt = self.create_txt.get()
+                    hbm_enabled = self.enable_hbm.get()
 
                     out_subdir = os.path.join(self.output_dir, os.path.splitext(os.path.basename(file))[0])
                     os.makedirs(out_subdir, exist_ok=True)
 
                     self.log(f"\nProcessing: {file}")
-                    process_obj_file(file, out_subdir, java_name, self.log, generate_txt=generate_txt, output_name=model_name)
+                    process_obj_file(file, out_subdir, java_name, self.log,
+                                     generate_txt=generate_txt, output_name=model_name,
+                                     enable_hbm=hbm_enabled)
                     self.log(f"Saved to: {out_subdir}")
                 except Exception as e:
                     had_error = True
